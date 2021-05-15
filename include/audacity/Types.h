@@ -44,6 +44,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <limits>
 #include <type_traits>
 #include <vector>
 #include <wx/debug.h> // for wxASSERT
@@ -373,7 +374,10 @@ public:
             default: {
                bool debug = request == Request::DebugFormat;
                return wxString::Format(
-                  TranslatableString::DoSubstitute( prevFormatter, str, debug ),
+                  TranslatableString::DoSubstitute(
+                     prevFormatter,
+                     str, TranslatableString::DoGetContext( prevFormatter ),
+                     debug ),
                   TranslatableString::TranslateArgument( args, debug )...
                );
             }
@@ -399,8 +403,11 @@ public:
          switch ( request ) {
             case Request::Context:
                return context;
+            case Request::DebugFormat:
+               return DoSubstitute( {}, str, context, true );
+            case Request::Format:
             default:
-               return str;
+               return DoSubstitute( {}, str, context, false );
          }
       };
       return *this;
@@ -477,9 +484,11 @@ private:
 
    static wxString DoGetContext( const Formatter &formatter );
    static wxString DoSubstitute(
-      const Formatter &formatter, const wxString &format, bool debug );
+      const Formatter &formatter,
+      const wxString &format, const wxString &context, bool debug );
    wxString DoFormat( bool debug ) const
-   {  return DoSubstitute( mFormatter, mMsgid, debug ); }
+   {  return DoSubstitute(
+      mFormatter, mMsgid, DoGetContext(mFormatter), debug ); }
 
    static wxString DoChooseFormat(
       const Formatter &formatter,
